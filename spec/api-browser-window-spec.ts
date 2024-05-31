@@ -31,7 +31,7 @@ const isScaleFactorRounding = () => {
 
 const expectBoundsEqual = (actual: any, expected: any) => {
   if (!isScaleFactorRounding()) {
-    expect(expected).to.deep.equal(actual);
+    expect(actual).to.deep.equal(expected);
   } else if (Array.isArray(actual)) {
     expect(actual[0]).to.be.closeTo(expected[0], 1);
     expect(actual[1]).to.be.closeTo(expected[1], 1);
@@ -1246,7 +1246,6 @@ describe('BrowserWindow module', () => {
         }
       });
 
-      // FIXME: disabled in `disabled-tests.json`
       ifit(process.platform === 'darwin')('it does not activate the app if focusing an inactive panel', async () => {
         // Show to focus app, then remove existing window
         w.show();
@@ -1269,7 +1268,7 @@ describe('BrowserWindow module', () => {
         const isShow = once(w, 'show');
         const isFocus = once(w, 'focus');
 
-        w.showInactive();
+        w.show();
         w.focus();
 
         await isShow;
@@ -1502,6 +1501,13 @@ describe('BrowserWindow module', () => {
         w.setBounds(fullBounds);
 
         expectBoundsEqual(w.getBounds(), fullBounds);
+      });
+
+      it('rounds non-integer bounds', () => {
+        w.setBounds({ x: 440.5, y: 225.1, width: 500.4, height: 400.9 });
+
+        const bounds = w.getBounds();
+        expect(bounds).to.deep.equal({ x: 441, y: 225, width: 500, height: 401 });
       });
 
       it('sets the window bounds with partial bounds', () => {
@@ -6597,6 +6603,7 @@ describe('BrowserWindow module', () => {
     afterEach(closeAllWindows);
 
     ifit(hasCapturableScreen())('should allow the window to be dragged when enabled', async () => {
+      // FIXME: nut-js has been removed from npm; we need to find a replacement
       // WOA fails to load libnut so we're using require to defer loading only
       // on supported platforms.
       // "@nut-tree\libnut-win32\build\Release\libnut.node is not a valid Win32 application."
@@ -6641,6 +6648,7 @@ describe('BrowserWindow module', () => {
     });
 
     ifit(hasCapturableScreen())('should allow the window to be dragged when no WCO and --webkit-app-region: drag enabled', async () => {
+      // FIXME: nut-js has been removed from npm; we need to find a replacement
       // @ts-ignore: nut-js is an optional dependency so it may not be installed
       const { mouse, straightTo, centerOf, Region, Button } = require('@nut-tree/nut-js') as typeof import('@nut-tree/nut-js');
 

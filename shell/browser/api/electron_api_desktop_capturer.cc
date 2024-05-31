@@ -399,12 +399,7 @@ void DesktopCapturer::UpdateSourcesList(DesktopMediaList* list) {
       int device_name_index = 0;
       for (auto& source : screen_sources) {
         const auto& device_name = device_names[device_name_index++];
-        std::wstring wide_device_name;
-        base::UTF8ToWide(device_name.c_str(), device_name.size(),
-                         &wide_device_name);
-        const int64_t device_id =
-            display::win::internal::DisplayInfo::DeviceIdFromDeviceName(
-                wide_device_name.c_str());
+        const int64_t device_id = base::PersistentHash(device_name);
         source.display_id = base::NumberToString(device_id);
       }
     }

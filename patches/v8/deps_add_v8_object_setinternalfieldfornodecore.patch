@@ -11,10 +11,10 @@ This is a non-ABI breaking solution added by Node.js in v20.x for:
 which are necessary for backporting the vm-related memory fixes in https://github.com/nodejs/node/pull/48510.
 
 diff --git a/include/v8-object.h b/include/v8-object.h
-index 6cdf53b19c7d058bb66b9fcbe745874cc48daa99..8d112008c2667db97ed5b5af3f87c40d0ef8466a 100644
+index 49a2b7dcbb05ff8670105ca280d3f6c3f5cee44f..ae2f128549048abd24e856440819db06f65e871a 100644
 --- a/include/v8-object.h
 +++ b/include/v8-object.h
-@@ -20,6 +20,8 @@ class Function;
+@@ -22,6 +22,8 @@ class Function;
  class FunctionTemplate;
  template <typename T>
  class PropertyCallbackInfo;
@@ -23,7 +23,7 @@ index 6cdf53b19c7d058bb66b9fcbe745874cc48daa99..8d112008c2667db97ed5b5af3f87c40d
  
  /**
   * A private symbol
-@@ -509,6 +511,21 @@ class V8_EXPORT Object : public Value {
+@@ -538,6 +540,21 @@ class V8_EXPORT Object : public Value {
          index);
    }
  
@@ -46,10 +46,10 @@ index 6cdf53b19c7d058bb66b9fcbe745874cc48daa99..8d112008c2667db97ed5b5af3f87c40d
    V8_INLINE static void* GetAlignedPointerFromInternalField(
        const BasicTracedReference<Object>& object, int index) {
 diff --git a/src/api/api.cc b/src/api/api.cc
-index a7070c494c211bec5692767e26ab7bd072b2d6fd..1718b88b8b949c1d61c543c8f0538f55156da85c 100644
+index 2fe89e5778efbc309d56c721339e64d75804fea0..f459d5b4e408e16c476e7580ba707606f85c30e0 100644
 --- a/src/api/api.cc
 +++ b/src/api/api.cc
-@@ -6286,14 +6286,33 @@ Local<Data> v8::Object::SlowGetInternalField(int index) {
+@@ -6252,14 +6252,33 @@ Local<Data> v8::Object::SlowGetInternalField(int index) {
        isolate);
  }
  

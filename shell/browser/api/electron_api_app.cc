@@ -407,10 +407,10 @@ bool NotificationCallbackWrapper(
     const base::RepeatingCallback<
         void(base::CommandLine command_line,
              const base::FilePath& current_directory,
-             const std::vector<const uint8_t> additional_data)>& callback,
+             const std::vector<uint8_t> additional_data)>& callback,
     base::CommandLine cmd,
     const base::FilePath& cwd,
-    const std::vector<const uint8_t> additional_data) {
+    const std::vector<uint8_t> additional_data) {
   // Make sure the callback is called after app gets ready.
   if (Browser::Get()->is_ready()) {
     callback.Run(std::move(cmd), cwd, std::move(additional_data));
@@ -462,8 +462,7 @@ void OnClientCertificateSelected(
     return;
 
   auto certs = net::X509Certificate::CreateCertificateListFromBytes(
-      base::as_bytes(base::make_span(data.c_str(), data.size())),
-      net::X509Certificate::FORMAT_AUTO);
+      base::as_bytes(base::make_span(data)), net::X509Certificate::FORMAT_AUTO);
   if (!certs.empty()) {
     scoped_refptr<net::X509Certificate> cert(certs[0].get());
     for (auto& identity : *identities) {
@@ -987,7 +986,7 @@ std::string App::GetLocaleCountryCode() {
 
 void App::OnSecondInstance(base::CommandLine cmd,
                            const base::FilePath& cwd,
-                           const std::vector<const uint8_t> additional_data) {
+                           const std::vector<uint8_t> additional_data) {
   v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
   v8::HandleScope handle_scope(isolate);
   v8::Local<v8::Value> data_value =
@@ -1277,9 +1276,10 @@ std::vector<gin_helper::Dictionary> App::GetAppMetrics(v8::Isolate* isolate) {
     auto pid_dict = gin_helper::Dictionary::CreateEmpty(isolate);
     auto cpu_dict = gin_helper::Dictionary::CreateEmpty(isolate);
 
-    std::optional<double> usage =
-        process_metric.second->metrics->GetPlatformIndependentCPUUsage();
-    cpu_dict.Set("percentCPUUsage", usage.value_or(0) / processor_count);
+    double usage =
+        process_metric.second->metrics->GetPlatformIndependentCPUUsage()
+            .value_or(0);
+    cpu_dict.Set("percentCPUUsage", usage / processor_count);
 
 #if !BUILDFLAG(IS_WIN)
     cpu_dict.Set("idleWakeupsPerSecond",

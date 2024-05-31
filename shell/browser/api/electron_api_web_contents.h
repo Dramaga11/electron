@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 
+#include "base/functional/callback_forward.h"
 #include "base/memory/raw_ptr.h"
 #include "base/memory/raw_ptr_exclusion.h"
 #include "base/memory/weak_ptr.h"
@@ -110,7 +111,7 @@ class WebContents : public ExclusiveAccessContext,
                     public gin_helper::CleanedUpAtExit,
                     public content::WebContentsObserver,
                     public content::WebContentsDelegate,
-                    public content::RenderWidgetHost::InputEventObserver,
+                    private content::RenderWidgetHost::InputEventObserver,
                     public content::JavaScriptDialogManager,
                     public InspectableWebContentsDelegate,
                     public InspectableWebContentsViewDelegate,
@@ -236,7 +237,6 @@ class WebContents : public ExclusiveAccessContext,
 #if BUILDFLAG(ENABLE_PRINTING)
   void OnGetDeviceNameToUse(base::Value::Dict print_settings,
                             printing::CompletionCallback print_callback,
-                            bool silent,
                             // <error, device_name>
                             std::pair<std::string, std::u16string> info);
   void Print(gin::Arguments* args);
@@ -451,7 +451,6 @@ class WebContents : public ExclusiveAccessContext,
 
   // mojom::ElectronWebContentsUtility
   void OnFirstNonEmptyLayout(content::RenderFrameHost* render_frame_host);
-  void UpdateDraggableRegions(std::vector<mojom::DraggableRegionPtr> regions);
   void SetTemporaryZoomLevel(double level);
   void DoGetZoomLevel(
       electron::mojom::ElectronWebContentsUtility::DoGetZoomLevelCallback
@@ -558,7 +557,9 @@ class WebContents : public ExclusiveAccessContext,
                       bool* was_blocked) override;
   content::WebContents* OpenURLFromTab(
       content::WebContents* source,
-      const content::OpenURLParams& params) override;
+      const content::OpenURLParams& params,
+      base::OnceCallback<void(content::NavigationHandle&)>
+          navigation_handle_callback) override;
   void BeforeUnloadFired(content::WebContents* tab,
                          bool proceed,
                          bool* proceed_to_fire_unload) override;
@@ -620,6 +621,9 @@ class WebContents : public ExclusiveAccessContext,
   void OnAudioStateChanged(bool audible) override;
   void UpdatePreferredSize(content::WebContents* web_contents,
                            const gfx::Size& pref_size) override;
+  void DraggableRegionsChanged(
+      const std::vector<blink::mojom::DraggableRegionPtr>& regions,
+      content::WebContents* contents) override;
 
   // content::WebContentsObserver:
   void BeforeUnloadFired(bool proceed) override;
@@ -714,12 +718,9 @@ class WebContents : public ExclusiveAccessContext,
                        ExclusiveAccessBubbleType bubble_type,
                        const int64_t display_id) override;
   void ExitFullscreen() override;
-  void UpdateExclusiveAccessExitBubbleContent(
-      const GURL& url,
-      ExclusiveAccessBubbleType bubble_type,
-      ExclusiveAccessBubbleHideCallback bubble_first_hide_callback,
-      bool notify_download,
-      bool force_update) override;
+  void UpdateExclusiveAccessBubble(
+      const ExclusiveAccessBubbleParams& params,
+      ExclusiveAccessBubbleHideCallback bubble_first_hide_callback) override;
   void OnExclusiveAccessUserInput() override;
   content::WebContents* GetActiveWebContents() override;
   bool CanUserExitFullscreen() const override;

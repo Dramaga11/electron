@@ -43,7 +43,7 @@ class PlatformNotificationService;
 class ElectronWebAuthenticationDelegate;
 
 class ElectronBrowserClient : public content::ContentBrowserClient,
-                              public content::RenderProcessHostObserver {
+                              private content::RenderProcessHostObserver {
  public:
   static ElectronBrowserClient* Get();
   static void SetApplicationLocale(const std::string& locale);
@@ -222,6 +222,7 @@ class ElectronBrowserClient : public content::ContentBrowserClient,
       int render_process_id,
       URLLoaderFactoryType type,
       const url::Origin& request_initiator,
+      const net::IsolationInfo& isolation_info,
       std::optional<int64_t> navigation_id,
       ukm::SourceIdObj ukm_source_id,
       network::URLLoaderFactoryBuilder& factory_builder,

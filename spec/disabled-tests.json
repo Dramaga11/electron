@@ -8,5 +8,6 @@
   "webFrameMain module WebFrame.visibilityState should match window state",
   "reporting api sends a report for a deprecation",
   "chromium features SpeechSynthesis should emit lifecycle events",
-  "BrowserWindow module focus and visibility BrowserWindow.focus() it does not activate the app if focusing an inactive panel"
+  "BrowserWindow module draggable regions should allow the window to be dragged when enabled",
+  "BrowserWindow module draggable regions should allow the window to be dragged when no WCO and --webkit-app-region: drag enabled"
 ]

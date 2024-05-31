@@ -39,6 +39,7 @@
 #include "shell/common/options_switches.h"
 #include "ui/aura/window_tree_host.h"
 #include "ui/base/hit_test.h"
+#include "ui/display/screen.h"
 #include "ui/gfx/image/image.h"
 #include "ui/gfx/native_widget_types.h"
 #include "ui/ozone/public/ozone_platform.h"
@@ -80,9 +81,9 @@
 #include "shell/browser/ui/win/electron_desktop_native_widget_aura.h"
 #include "skia/ext/skia_utils_win.h"
 #include "ui/base/win/shell.h"
-#include "ui/display/screen.h"
 #include "ui/display/win/screen_win.h"
 #include "ui/gfx/color_utils.h"
+#include "ui/gfx/win/hwnd_util.h"
 #include "ui/gfx/win/msg_util.h"
 #endif
 
@@ -469,12 +470,12 @@ void NativeWindowViews::SetGTKDarkThemeEnabled(bool use_dark_theme) {
 
 void NativeWindowViews::SetContentView(views::View* view) {
   if (content_view()) {
-    root_view_.RemoveChildView(content_view());
+    root_view_.GetMainView()->RemoveChildView(content_view());
   }
   set_content_view(view);
   focused_view_ = view;
-  root_view_.AddChildView(content_view());
-  root_view_.DeprecatedLayoutImmediately();
+  root_view_.GetMainView()->AddChildView(content_view());
+  root_view_.GetMainView()->DeprecatedLayoutImmediately();
 }
 
 void NativeWindowViews::Close() {
@@ -1069,8 +1070,23 @@ ui::ZOrderLevel NativeWindowViews::GetZOrderLevel() const {
   return widget()->GetZOrderLevel();
 }
 
+// We previous called widget()->CenterWindow() here, but in
+// Chromium CL 4916277 behavior was changed to center relative to the
+// parent window if there is one. We want to keep the old behavior
+// for now to avoid breaking API contract, but should consider the long
+// term plan for this aligning with upstream.
 void NativeWindowViews::Center() {
-  widget()->CenterWindow(GetSize());
+#if BUILDFLAG(IS_LINUX)
+  auto display =
+      display::Screen::GetScreen()->GetDisplayNearestWindow(GetNativeWindow());
+  gfx::Rect window_bounds_in_screen = display.work_area();
+  window_bounds_in_screen.ClampToCenteredSize(GetSize());
+  widget()->SetBounds(window_bounds_in_screen);
+#else
+  HWND hwnd = GetAcceleratedWidget();
+  gfx::Size size = display::win::ScreenWin::DIPToScreenSize(hwnd, GetSize());
+  gfx::CenterAndSizeWindow(nullptr, hwnd, size);
+#endif
 }
 
 void NativeWindowViews::Invalidate() {
@@ -1664,7 +1680,7 @@ std::u16string NativeWindowViews::GetWindowTitle() const {
 }
 
 views::View* NativeWindowViews::GetContentsView() {
-  return &root_view_;
+  return root_view_.GetMainView();
 }
 
 bool NativeWindowViews::ShouldDescendIntoChildForEventHandling(
@@ -1674,7 +1690,7 @@ bool NativeWindowViews::ShouldDescendIntoChildForEventHandling(
 }
 
 views::ClientView* NativeWindowViews::CreateClientView(views::Widget* widget) {
-  return new NativeWindowClientView{widget, GetContentsView(), this};
+  return new NativeWindowClientView{widget, &root_view_, this};
 }
 
 std::unique_ptr<views::NonClientFrameView>

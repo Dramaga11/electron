@@ -25,6 +25,7 @@
 #include "content/browser/renderer_host/render_widget_host_delegate.h"  // nogncheck
 #include "content/browser/renderer_host/render_widget_host_owner_delegate.h"  // nogncheck
 #include "content/common/input/synthetic_gesture.h"  // nogncheck
+#include "content/common/input/synthetic_gesture_target.h"
 #include "content/public/browser/browser_task_traits.h"
 #include "content/public/browser/browser_thread.h"
 #include "content/public/browser/context_factory.h"
@@ -159,8 +160,11 @@ class ElectronDelegatedFrameHostClient
     return view_->GetDeviceScaleFactor();
   }
 
-  std::vector<viz::SurfaceId> CollectSurfaceIdsForEviction() override {
-    return view_->render_widget_host()->CollectSurfaceIdsForEviction();
+  viz::FrameEvictorClient::EvictIds CollectSurfaceIdsForEviction() override {
+    viz::FrameEvictorClient::EvictIds ids;
+    ids.embedded_ids =
+        view_->render_widget_host()->CollectSurfaceIdsForEviction();
+    return ids;
   }
 
   bool ShouldShowStaleContentOnEviction() override { return false; }
@@ -229,6 +233,7 @@ OffScreenRenderWidgetHostView::OffScreenRenderWidgetHostView(
 
   ResizeRootLayer(false);
   render_widget_host_->SetView(this);
+  render_widget_host_->render_frame_metadata_provider()->AddObserver(this);
 
   if (content::GpuDataManager::GetInstance()->HardwareAccelerationEnabled()) {
     video_consumer_ = std::make_unique<OffScreenVideoConsumer>(
@@ -239,7 +244,21 @@ OffScreenRenderWidgetHostView::OffScreenRenderWidgetHostView(
   }
 }
 
+void OffScreenRenderWidgetHostView::OnLocalSurfaceIdChanged(
+    const cc::RenderFrameMetadata& metadata) {
+  if (metadata.local_surface_id) {
+    bool changed = delegated_frame_host_allocator_.UpdateFromChild(
+        *metadata.local_surface_id);
+
+    if (changed) {
+      ResizeRootLayer(true);
+    }
+  }
+}
+
 OffScreenRenderWidgetHostView::~OffScreenRenderWidgetHostView() {
+  render_widget_host_->render_frame_metadata_provider()->RemoveObserver(this);
+
   // Marking the DelegatedFrameHost as removed from the window hierarchy is
   // necessary to remove all connections to its old ui::Compositor.
   if (is_showing_)

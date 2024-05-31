@@ -130,7 +130,6 @@ uint32_t GetStorageMask(const std::vector<std::string>& storage_types) {
            {"indexdb", StoragePartition::REMOVE_DATA_MASK_INDEXEDDB},
            {"localstorage", StoragePartition::REMOVE_DATA_MASK_LOCAL_STORAGE},
            {"shadercache", StoragePartition::REMOVE_DATA_MASK_SHADER_CACHE},
-           {"websql", StoragePartition::REMOVE_DATA_MASK_WEBSQL},
            {"serviceworkers",
             StoragePartition::REMOVE_DATA_MASK_SERVICE_WORKERS},
            {"cachestorage", StoragePartition::REMOVE_DATA_MASK_CACHE_STORAGE}});
@@ -172,7 +171,6 @@ constexpr auto kDataTypeLookup =
         {"indexedDB", BrowsingDataRemover::DATA_TYPE_INDEXED_DB},
         {"localStorage", BrowsingDataRemover::DATA_TYPE_LOCAL_STORAGE},
         {"serviceWorkers", BrowsingDataRemover::DATA_TYPE_SERVICE_WORKERS},
-        {"webSQL", BrowsingDataRemover::DATA_TYPE_WEB_SQL},
     });
 
 BrowsingDataRemover::DataType GetDataTypeMask(
@@ -264,7 +262,7 @@ class ClearDataTask {
   // of a full |ClearDataTask|. This class manages its own lifetime, cleaning
   // itself up after the operation completes and notifies the task of the
   // result.
-  class ClearDataOperation : public BrowsingDataRemover::Observer {
+  class ClearDataOperation : private BrowsingDataRemover::Observer {
    public:
     static void Run(std::shared_ptr<ClearDataTask> task,
                     BrowsingDataRemover* remover,
@@ -1545,8 +1543,7 @@ gin::Handle<Session> Session::FromPartition(v8::Isolate* isolate,
   if (partition.empty()) {
     browser_context =
         ElectronBrowserContext::From("", false, std::move(options));
-  } else if (base::StartsWith(partition, kPersistPrefix,
-                              base::CompareCase::SENSITIVE)) {
+  } else if (partition.starts_with(kPersistPrefix)) {
     std::string name = partition.substr(8);
     browser_context =
         ElectronBrowserContext::From(name, false, std::move(options));

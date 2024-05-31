@@ -50,9 +50,9 @@ namespace api {
 class App : public ElectronBrowserClient::Delegate,
             public gin::Wrappable<App>,
             public gin_helper::EventEmitterMixin<App>,
-            public BrowserObserver,
-            public content::GpuDataManagerObserver,
-            public content::BrowserChildProcessObserver {
+            private BrowserObserver,
+            private content::GpuDataManagerObserver,
+            private content::BrowserChildProcessObserver {
  public:
   using FileIconCallback =
       base::RepeatingCallback<void(v8::Local<v8::Value>, const gfx::Image&)>;
@@ -196,7 +196,7 @@ class App : public ElectronBrowserClient::Delegate,
   std::string GetSystemLocale(gin_helper::ErrorThrower thrower) const;
   void OnSecondInstance(base::CommandLine cmd,
                         const base::FilePath& cwd,
-                        const std::vector<const uint8_t> additional_data);
+                        const std::vector<uint8_t> additional_data);
   bool HasSingleInstanceLock() const;
   bool RequestSingleInstanceLock(gin::Arguments* args);
   void ReleaseSingleInstanceLock();

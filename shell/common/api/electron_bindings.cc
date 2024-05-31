@@ -83,10 +83,7 @@ void ElectronBindings::BindTo(v8::Isolate* isolate,
 }
 
 void ElectronBindings::EnvironmentDestroyed(node::Environment* env) {
-  auto it =
-      std::find(pending_next_ticks_.begin(), pending_next_ticks_.end(), env);
-  if (it != pending_next_ticks_.end())
-    pending_next_ticks_.erase(it);
+  std::erase(pending_next_ticks_, env);
 }
 
 void ElectronBindings::ActivateUVLoop(v8::Isolate* isolate) {
@@ -277,8 +274,8 @@ v8::Local<v8::Value> ElectronBindings::GetCPUUsage(
     v8::Isolate* isolate) {
   auto dict = gin_helper::Dictionary::CreateEmpty(isolate);
   int processor_count = base::SysInfo::NumberOfProcessors();
-  std::optional<double> usage = metrics->GetPlatformIndependentCPUUsage();
-  dict.Set("percentCPUUsage", usage.value_or(0) / processor_count);
+  double usage = metrics->GetPlatformIndependentCPUUsage().value_or(0);
+  dict.Set("percentCPUUsage", usage / processor_count);
 
   // NB: This will throw NOTIMPLEMENTED() on Windows
   // For backwards compatibility, we'll return 0

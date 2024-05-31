@@ -214,7 +214,7 @@
 #include "components/pdf/browser/pdf_document_helper.h"             // nogncheck
 #include "components/pdf/browser/pdf_navigation_throttle.h"
 #include "components/pdf/browser/pdf_url_loader_request_interceptor.h"
-#include "components/pdf/common/constants.h"
+#include "components/pdf/common/constants.h"  // nogncheck
 #include "shell/browser/electron_pdf_document_helper_client.h"
 #endif
 
@@ -456,7 +456,15 @@ void ElectronBrowserClient::AppendExtraCommandLineSwitches(
     base::CommandLine* command_line,
     int process_id) {
   // Make sure we're about to launch a known executable
+#if BUILDFLAG(IS_LINUX)
+  // On Linux, do not perform this check for /proc/self/exe. It will always
+  // point to the currently running executable so this check is not
+  // necessary, and if the executable has been deleted it will return a fake
+  // name that causes this check to fail.
+  if (command_line->GetProgram() != base::FilePath(base::kProcSelfExe)) {
+#else
   {
+#endif
     ScopedAllowBlockingForElectron allow_blocking;
     base::FilePath child_path;
     base::FilePath program =
@@ -556,16 +564,6 @@ void ElectronBrowserClient::AppendExtraCommandLineSwitches(
     if (env->HasVar("ELECTRON_PROFILE_INIT_SCRIPTS")) {
       command_line->AppendSwitch("profile-electron-init");
     }
-
-    // Extension background pages don't have WebContentsPreferences, but they
-    // support WebSQL by default.
-#if BUILDFLAG(ENABLE_ELECTRON_EXTENSIONS)
-    content::RenderProcessHost* process =
-        content::RenderProcessHost::FromID(process_id);
-    if (extensions::ProcessMap::Get(process->GetBrowserContext())
-            ->Contains(process_id))
-      command_line->AppendSwitch(switches::kEnableWebSQL);
-#endif
 
     content::WebContents* web_contents =
         GetWebContentsFromProcessID(process_id);
@@ -1295,6 +1293,7 @@ void ElectronBrowserClient::WillCreateURLLoaderFactory(
     int render_process_id,
     URLLoaderFactoryType type,
     const url::Origin& request_initiator,
+    const net::IsolationInfo& isolation_info,
     std::optional<int64_t> navigation_id,
     ukm::SourceIdObj ukm_source_id,
     network::URLLoaderFactoryBuilder& factory_builder,
@@ -1494,10 +1493,10 @@ void ElectronBrowserClient::
                           render_frame_host.GetGlobalId()));
 #endif
 #if BUILDFLAG(ENABLE_PDF_VIEWER)
-  associated_registry.AddInterface<pdf::mojom::PdfService>(base::BindRepeating(
+  associated_registry.AddInterface<pdf::mojom::PdfHost>(base::BindRepeating(
       [](content::RenderFrameHost* render_frame_host,
-         mojo::PendingAssociatedReceiver<pdf::mojom::PdfService> receiver) {
-        pdf::PDFDocumentHelper::BindPdfService(
+         mojo::PendingAssociatedReceiver<pdf::mojom::PdfHost> receiver) {
+        pdf::PDFDocumentHelper::BindPdfHost(
             std::move(receiver), render_frame_host,
             std::make_unique<ElectronPDFDocumentHelperClient>());
       },
